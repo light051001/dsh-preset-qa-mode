@@ -80,6 +80,7 @@ See [CHECKLIST.md](CHECKLIST.md).
 ## 致谢与许可 / Credits & License
 
 - 底版来自 DeepSeek Harness 内置 `standard` 预设；DeepSeek Harness 以 MIT 许可开源：<https://github.com/deepseek-ai/deepseek-harness>
+- v0.2.0 引入的四条澄清机制（来源标签、节奏护栏、回显确认、一句话终检）的设计思想借鉴自 [Q00/ouroboros](https://github.com/Q00/ouroboros)（MIT）——一个规范先行（spec-first）的 AI 开发工作流引擎；本预设以纯提示词重新实现，未复用其代码。
 - 本仓库同样以 MIT 许可发布，见 [LICENSE](LICENSE)。
 
 ## 版本 / Versions
