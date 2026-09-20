@@ -6,9 +6,9 @@
 
 ## 这是什么 / What it is
 
-「问答模式」以 DSH 内置的 `standard`（标准模式）预设为底版，**完整保留其全部能力**（文件编辑、Shell、文件与网页检索、Skills、计划模式、目标、子代理、工作流等），只改写了人设与行为规则（`agent.cordis.yml` 中的 `persona` 行）。
+「问答模式」以 DSH 内置的 `standard`（标准模式）预设为底版，**完整保留其全部能力**（文件编辑、Shell、文件与网页检索、网页抓取、Skills、计划模式、目标与 `/goal` 命令、子代理、工作流、交付物声明等），只改写了人设与行为规则（`agent.cordis.yml` 中的 `persona` 行）。
 
-`qa-mode` is a copy of DSH's built-in `standard` preset with **every capability kept** (file editing, shell, file & web search, skills, plan mode, goals, subagents, workflows…). Only the persona / behavior rules are rewritten (the `persona` row in `agent.cordis.yml`).
+`qa-mode` is a copy of DSH's built-in `standard` preset with **every capability kept** (file editing, shell, file & web search, web fetch, skills, plan mode, goals and the `/goal` command, subagents, workflows, deliverables…). Only the persona / behavior rules are rewritten (the `persona` row in `agent.cordis.yml`).
 
 ## 行为协议 / Behavior protocol
 
@@ -68,7 +68,14 @@ See [CHECKLIST.md](CHECKLIST.md).
 
 ## 自定义 / Customization
 
-所有行为规则都在 `qa-mode/agent.cordis.yml` 的 `persona` 行（`config.text`）里，可直接修改：
+所有行为规则都在 `qa-mode/agent.cordis.yml` 的 `persona` 行里，分两段：
+
+- `config.prefix`：身份句 + 全部澄清协议、总结确认、执行与语言规则（**要改的通常就是这里**）；
+- `config.suffix`：`Your working directory is {{cwd}}.`——部署默认人设的工作目录句，预设会整体遮蔽部署人设，所以这一句必须在此重申。
+
+Every behavior rule lives in the `persona` row: `config.prefix` carries the identity sentence plus the whole clarification protocol, and `config.suffix` restates the deployment's working-directory sentence (a preset shadows the deployment persona outright, so omitting it drops that line).
+
+可直接修改：
 
 - 调整提问轮次上限（默认 5 轮 / 每轮 ≤ 10 问）；
 - 增删提问维度；
@@ -76,6 +83,26 @@ See [CHECKLIST.md](CHECKLIST.md).
 - 元数据（名称、描述）在 `qa-mode/preset.yml`。
 
 改完保存后，新建会话即生效。修改组合文件后建议先用 DSH 的挂载校验确认其有效。
+
+> ⚠️ 不要改回旧版的 `config.text`：DSH 0.1.5 起 `dsh-persona` 只接受 `prefix` / `suffix` / `complete` / `includeRuntimeContext`，缺少 `prefix` 会让**整个预设挂载失败**（会话无法启动），而不是只失效人设。
+
+## 兼容性 / Compatibility
+
+| 预设版本 | 适配的 DSH | 说明 |
+| --- | --- | --- |
+| 0.3.0 | 0.1.5-rc.2 及以后 | 人设行迁移到 `prefix`/`suffix`；补齐 `/goal` 命令、`present` 交付物、子代理模型选择、网页抓取 |
+| 0.2.0 / 0.1.0 | 0.1.4 及以前 | 使用已移除的 `config.text`，在 DSH 0.1.5 上**无法挂载** |
+
+`qa-mode/agent.cordis.yml` 是 `standard` 的**分叉（fork）**：除了 `persona` 行，其余每一行都应与同版本 DSH 的 `standard` 完全一致。DSH 升级后建议重新对齐：
+
+```bash
+diff "<DSH 安装目录>/@deepseek-ai/dsh-agent-presets/presets/standard/agent.cordis.yml" \
+     "$DSH_HOME/.agent-presets/qa-mode/agent.cordis.yml"
+```
+
+除 `persona` 行与标注了 `[qa-mode]` 的注释外，任何差异都说明 `standard` 新增或调整了能力而本预设尚未跟进。
+
+The composition is a **fork of `standard`**: apart from the `persona` row, every row should match the same DSH version's `standard`. Re-diff after each DSH upgrade; any difference outside the `persona` row and the `[qa-mode]`-marked comments is drift.
 
 ## 致谢与许可 / Credits & License
 

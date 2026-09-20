@@ -2,6 +2,27 @@
 
 本文件记录「问答模式」预设的各版本变更。格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循 [SemVer](https://semver.org/lang/zh-CN/)。
 
+## [0.3.0] - 2026-08-17
+
+适配 DSH `0.1.5-rc.2`：与内置 `standard` 预设重新对齐。
+
+### Fixed
+
+- **人设行迁移到新 schema（关键修复）**：`dsh-persona` 已不再接受 `config.text`，改为必填的 `config.prefix` 加 `config.suffix`。旧写法会让**整个预设挂载失败**（`invalid config: $.prefix missing required value`），选中「问答模式」的会话根本无法启动。现改为 `prefix` 承载身份句与全部协议、`suffix` 重申部署人设的工作目录句。
+- 补齐 `/goal` 命令（`command-goal` 行）：Web 界面会停用宿主机的该行，由预设接管；此前只有 `tool-goal`，导致有目标工具却没有 `/goal` 命令。
+
+### Added
+
+- `present` 交付物声明工具（`@deepseek-ai/dsh-tool-present`）。
+- 子代理 `modelSelectionSettings: true`：`subagent` 工具可为子代理单独选择模型。
+- 网页抓取（`web_fetch`）：`tool-web` 的 `fetch` 恢复为标准模式的 `true`。
+
+### Changed
+
+- 可选的 Codex / Claude Code 子代理行按新 schema 改用 `backgroundMode: one-shot`（原 `enableRunInBackground` 写法）。
+- `agent.cordis.yml` 顶部加入分叉说明与重新对齐方法，并在本地特有处标注 `[qa-mode]` 注释，便于随 DSH 升级同步。
+- README 增加「兼容性」表与 `prefix`/`suffix` 自定义说明。
+
 ## [0.2.0] - 2026-08-16
 
 ### Added

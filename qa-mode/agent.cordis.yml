@@ -1,3 +1,19 @@
+# The `qa-mode` agent preset (问答模式): the `standard` coding agent whose persona
+# is replaced by an ask-first clarification protocol.
+#
+# FORK OF `standard`, re-synced against DSH 0.1.5-rc.2. The `persona` row is
+# the one intentional difference in ROWS; every other comment or row marked
+# `[qa-mode]` is a local note that says why this file must not be "simplified"
+# back to upstream. To re-sync after a DSH upgrade, diff this file against the
+# new shipped `standard` and re-apply only the persona row —
+#
+#   diff "<install>/@deepseek-ai/dsh-agent-presets/presets/standard/agent.cordis.yml" \
+#        "$DSH_HOME/.agent-presets/qa-mode/agent.cordis.yml"
+#
+# — because every OTHER difference is drift: a row (or a row's config) the new
+# `standard` gained and this preset has not. Section comments below say which
+# plane owns each capability and why, so a ported row keeps its reasoning.
+#
 # The `standard` agent preset: the full coding agent, mounted once per process.
 #
 # This file is an AGENT-PLANE composition. The roster mounts it ONCE under a
@@ -21,11 +37,19 @@
 
 # The preset's own persona, shadowing the deployment default for this agent.
 # `{{model}}` and `{{cwd}}` resolve from the agent's own route and workspace.
+#
+# SCHEMA (DSH 0.1.5): this row takes `prefix` (required) plus `suffix`,
+# `complete`, and `includeRuntimeContext`. The former `text` key is gone, and a
+# config without `prefix` rejects the WHOLE preset at mount, not just this row.
+# `prefix`/`suffix` shadow the deployment's own persona sections — the pair the
+# `system-prompt` row carries in the deployment patch — so a preset that sets
+# only `prefix` silently drops the working-directory sentence. Restate it in
+# `suffix`; do not append it to the protocol text.
 - id: persona
   name: '@deepseek-ai/dsh-persona'
   config:
-    text: |-
-      You are a coding agent powered by the {{model}} model. Your working directory is {{cwd}}.
+    prefix: |-
+      You are a coding agent powered by the {{model}} model.
 
       你是「问答模式」助手。你的核心行为准则：接到任何任务后，先通过极其详尽、结构化的提问彻底澄清用户的目的，经用户明确确认后才允许执行。交流语言与用户输入保持一致。
 
@@ -64,6 +88,7 @@
 
       ## 语言
       - 与用户语言保持一致：用户用什么语言输入，就用什么语言提问、总结、计划与汇报。
+    suffix: Your working directory is {{cwd}}.
 
 - id: agent-instructions
   name: '@deepseek-ai/dsh-agent-instructions'
@@ -126,12 +151,17 @@
 
 # ── goals ───────────────────────────────────────────────────────────────────
 
-# Only the model-facing tool. The goal SERVICE, its session driver, and the
-# `/goal` command stay on the host plane: the Gateway serves the goal domain as
-# Remote endpoints whose receiver comes from a generated descriptor, so it
-# resolves `goals` on the host and an entry-local realm here would hide it. The
-# registry is keyed by session anyway, so one host instance serves every
-# session. What a preset chooses is whether its agent can call the goal tool.
+# The goal service and session driver stay on the host plane, where the Gateway
+# can resolve them. The human command and model-facing tool register into this
+# preset's scoped layers.
+#
+# [qa-mode] BOTH rows are required here. The Web surface disables the host
+# `command-goal` and `tool-goal` rows so each session's preset owns them, so a
+# preset mounting only `tool-goal` gives its agent the goal tool but no `/goal`
+# command. This is the drift the 0.3.0 re-sync repaired; do not drop the row.
+- id: command-goal
+  name: '@deepseek-ai/dsh-command-goal'
+
 - id: tool-goal
   name: '@deepseek-ai/dsh-tool-goal'
 
@@ -203,12 +233,6 @@
 # `workflows` is different — nothing outside an agent reads it — so every row
 # that reaches it shares one entry-local realm here, and a consumer left
 # outside would resolve a host registry this preset does not populate.
-#
-# `tool-subagent-report` is host-plane for the same reason as the registry,
-# not because a preset may not want it: it registers a CONTINUABLE SETUP on
-# that singleton rather than a tool this agent calls, and the setup list is
-# not scope-aware — one copy per mounted preset means every child gets
-# `report` registered once per live session, which throws on the second.
 - id: delegation
   name: cordis:group
   group: true
@@ -226,8 +250,13 @@
       config:
         provider: spawn
         toolName: subagent
+        modelSelectionSettings: true
         backgroundMode: continuable
 
+    # Fork omits model selection so provider/model stay equal to the parent and
+    # the inherited history remains eligible for KV Cache reuse. This preset
+    # keeps fork continuable; parent and child inherit the same messaging tool,
+    # while the parent id and return guidance follow the inherited history.
     - id: tool-subagent-fork
       name: '@deepseek-ai/dsh-tool-subagent'
       config:
@@ -235,16 +264,17 @@
         toolName: subagent_fork
         backgroundMode: continuable
 
-    # Product providers are host-plane singletons. Copy this preset, then
-    # remove `disabled` from either ordinary tool row to expose that product
-    # only to agents composed from the copy.
+    # Production dsh does not install these optional providers. Install the
+    # matching Bundle in this Profile and restart the Host, then copy this
+    # preset and remove `disabled` from the matching tool row. Host availability
+    # alone grants no tool.
     - id: tool-subagent-codex
       name: '@deepseek-ai/dsh-tool-subagent'
       disabled: true
       config:
         provider: codex
         toolName: subagent_codex
-        enableRunInBackground: false
+        backgroundMode: one-shot
         maxDepth: provider-managed
 
     - id: tool-subagent-claude-code
@@ -253,7 +283,7 @@
       config:
         provider: claude-code
         toolName: subagent_claude_code
-        enableRunInBackground: false
+        backgroundMode: one-shot
         maxDepth: provider-managed
 
     - id: workflow-worker-thread
@@ -285,5 +315,10 @@
 - id: tool-web
   name: '@deepseek-ai/dsh-tool-web'
   config:
-    fetch: false
+    fetch: true
     searchTimeoutMs: 60000
+
+# [qa-mode] Declares already-written files as final deliverables, so the Web
+# surface lists them as produced files under the closing assistant message.
+- id: present
+  name: '@deepseek-ai/dsh-tool-present'
