@@ -2,6 +2,29 @@
 
 本文件记录「问答模式」预设的各版本变更。格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循 [SemVer](https://semver.org/lang/zh-CN/)。
 
+## [0.4.0] - 2026-08-17
+
+适配 DSH `0.2.x`（桌面版 `0.2.0-rc.2`）：预设格式整体换代。
+
+### Changed
+
+- **预设改为声明式行**：DSH 0.2 移除了用户预设目录——全部安装包中已无任何代码读取 `$DSH_HOME/.agent-presets/`，放在那里的预设文件会被静默忽略。预设现在是 profile 组合里的一条 `@deepseek-ai/dsh-agent-preset` 声明。`qa-mode` 因此由 `agent.cordis.yml` 改为 `qa-mode.patch.yml`；安装即把它的 `insert` 区块写入 `$DSH_HOME/profiles/<profile>/cordis.patch.yml`，并在**重启应用后**生效。
+- 与内置 `standard` 重新对齐，跟进 0.2 的能力变化：
+  - `workflow-worker-thread` → `workflow-ptc`（`@deepseek-ai/dsh-workflow-ptc`）；`@deepseek-ai/dsh-workflow-worker-thread` 在 0.2 已不存在，沿用旧包名会让整条预设解析失败；
+  - `tool-ralph` 跟随上游改为默认 `disabled: true`；
+  - 新增 `tool-plugin-manager`（默认停用）行。
+- 预设元数据 `name`（`问答模式`）/ `description` 从 `preset.yml` 移入声明行的 `config`；`order: 10` 让它在预设列表中排在四个内置预设之后。
+- 安装脚本重写：自动探测 profile、写入前备份、以注释标记包围区块因而**可重复运行**（替换而非叠加），并显式写不带 BOM 的 UTF-8（避免 Windows PowerShell 5.1 给 YAML 加 BOM）。
+- README 重写安装、自定义与兼容性章节；新增从 `app.asar` 取出内置 `standard` 预设做对齐的方法。
+
+### Added
+
+- `legacy-0.1.x/`：保留 DSH ≤ 0.1.5 可用的旧格式文件，并说明其在新版本上无效。
+
+### Moved
+
+- `qa-mode/agent.cordis.yml`、`qa-mode/preset.yml` → `legacy-0.1.x/`。
+
 ## [0.3.0] - 2026-08-17
 
 适配 DSH `0.1.5-rc.2`：与内置 `standard` 预设重新对齐。

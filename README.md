@@ -6,9 +6,9 @@
 
 ## 这是什么 / What it is
 
-「问答模式」以 DSH 内置的 `standard`（标准模式）预设为底版，**完整保留其全部能力**（文件编辑、Shell、文件与网页检索、网页抓取、Skills、计划模式、目标与 `/goal` 命令、子代理、工作流、交付物声明等），只改写了人设与行为规则（`agent.cordis.yml` 中的 `persona` 行）。
+「问答模式」以 DSH 内置的 `standard`（标准模式）预设为底版，**完整保留其全部能力**（文件编辑、Shell、文件与网页检索、网页抓取、Skills、计划模式、目标与 `/goal` 命令、子代理、工作流、交付物声明等），只改写了人设与行为规则（`qa-mode.patch.yml` 中 `plugins` 的 `persona` 行）。
 
-`qa-mode` is a copy of DSH's built-in `standard` preset with **every capability kept** (file editing, shell, file & web search, web fetch, skills, plan mode, goals and the `/goal` command, subagents, workflows, deliverables…). Only the persona / behavior rules are rewritten (the `persona` row in `agent.cordis.yml`).
+`qa-mode` is a copy of DSH's built-in `standard` preset with **every capability kept** (file editing, shell, file & web search, web fetch, skills, plan mode, goals and the `/goal` command, subagents, workflows, deliverables…). Only the persona / behavior rules are rewritten (the `persona` row in `qa-mode.patch.yml`).
 
 ## 行为协议 / Behavior protocol
 
@@ -28,32 +28,36 @@
 
 ## 安装 / Install
 
-**要求 / Requirements**：已安装 DeepSeek Harness（DSH）。
+**要求 / Requirements**：DSH **0.2.x**（桌面版或 CLI）。仍在 DSH ≤ 0.1.5 上请改用 [legacy-0.1.x/](legacy-0.1.x/) 或标签 `v0.3.0`。
 
-**方式一：一键脚本 / Script**
+DSH 0.2 起，预设不再是一个独立文件，而是 profile 组合里的一行声明。安装 = 把 qa-mode 的 `insert` 区块写进该 profile 的补丁层：
 
-Windows PowerShell：
+- Windows：`C:\Users\<用户名>\.dsh\profiles\<profile>\cordis.patch.yml`
+- macOS / Linux：`${DSH_HOME:-$HOME/.dsh}/profiles/<profile>/cordis.patch.yml`
+
+（桌面版的应用内 profile 名为 `desktop`。）
+
+**方式一：一键脚本 / Script**（自动探测 profile、自动备份、可重复运行）
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\install.ps1
 ```
 
-macOS / Linux：
-
 ```bash
 bash install.sh
 ```
 
-**方式二：手动复制 / Manual**
+**方式二：手动 / Manual**
 
-把本仓库的 `qa-mode/` 目录整体复制到：
+把 `qa-mode/qa-mode.patch.yml` 的全部内容追加到上面那个 `cordis.patch.yml` 末尾即可——该文件是一个 YAML 数组，追加一个 `- insert:` 条目就是新增一个预设。
 
-- Windows：`C:\Users\<你的用户名>\.dsh\.agent-presets\qa-mode\`
-- macOS / Linux：`$HOME/.dsh/.agent-presets/qa-mode/`（若设置了 `DSH_HOME`，则为 `$DSH_HOME/.agent-presets/qa-mode/`）
+**然后重启 DeepSeek Harness**（profile 只在启动时组合一次），再**新建会话**，在预设列表中选择「问答模式」。
 
-然后**新建会话**，在预设列表中选择「问答模式」即可。注意：目录名必须保持 `qa-mode`；修改预设后需新建会话才能生效。
+Restart DSH after installing — the profile is composed once at boot — then start a **new session** and pick **问答模式**.
 
-Copy the `qa-mode/` folder into `${DSH_HOME:-$HOME/.dsh}/.agent-presets/qa-mode/`, then start a **new session** and pick **问答模式** from the preset list. The folder name must stay `qa-mode`; changes take effect in new sessions only.
+**确认生效 / Verify**：预设列表出现「问答模式」。若是红色「损坏」徽标，把鼠标停上去会显示具体原因（通常是某个插件包解析失败或配置不合 schema）。
+
+**卸载 / Uninstall**：删除 `cordis.patch.yml` 中 `# >>> dsh-preset-qa-mode` 与 `# <<< dsh-preset-qa-mode <<<` 之间的区块，或还原安装脚本生成的备份 `cordis.patch.yml.bak-qa-mode`，再重启。
 
 ## 验收检查清单 / Acceptance checklist
 
@@ -68,41 +72,49 @@ See [CHECKLIST.md](CHECKLIST.md).
 
 ## 自定义 / Customization
 
-所有行为规则都在 `qa-mode/agent.cordis.yml` 的 `persona` 行里，分两段：
+所有行为规则都在 `qa-mode/qa-mode.patch.yml` 里 `config.plugins` 的 `persona` 行，分两段：
 
 - `config.prefix`：身份句 + 全部澄清协议、总结确认、执行与语言规则（**要改的通常就是这里**）；
 - `config.suffix`：`Your working directory is {{cwd}}.`——部署默认人设的工作目录句，预设会整体遮蔽部署人设，所以这一句必须在此重申。
 
-Every behavior rule lives in the `persona` row: `config.prefix` carries the identity sentence plus the whole clarification protocol, and `config.suffix` restates the deployment's working-directory sentence (a preset shadows the deployment persona outright, so omitting it drops that line).
+Every behavior rule lives in the `persona` row's `config`: `prefix` carries the identity sentence plus the whole clarification protocol, and `suffix` restates the deployment's working-directory sentence (a preset shadows the deployment persona outright, so omitting it drops that line).
 
 可直接修改：
 
 - 调整提问轮次上限（默认 5 轮 / 每轮 ≤ 10 问）；
 - 增删提问维度；
 - 调整确认与执行规则；
-- 元数据（名称、描述）在 `qa-mode/preset.yml`。
+- 元数据：同一个 `insert` 行 `config` 下的 `name`（预设列表里显示的名字）与 `description`。
 
-改完保存后，新建会话即生效。修改组合文件后建议先用 DSH 的挂载校验确认其有效。
+改完保存后，**重跑一次安装脚本**（它会替换旧区块，不会叠加），重启 DSH，再新建会话。
 
-> ⚠️ 不要改回旧版的 `config.text`：DSH 0.1.5 起 `dsh-persona` 只接受 `prefix` / `suffix` / `complete` / `includeRuntimeContext`，缺少 `prefix` 会让**整个预设挂载失败**（会话无法启动），而不是只失效人设。
+> ⚠️ 两个易踩的坑：
+> 1. 不要改回旧版的 `config.text`——`dsh-persona` 只接受 `prefix` / `suffix` / `complete` / `includeRuntimeContext`，缺少必填的 `prefix` 会让**整个预设挂载失败**（预设卡片显示「损坏」，选中它的会话起不来）。
+> 2. `plugins` 里每个 `name` 都必须是**已安装**的插件包。写错一个包名，整条预设就会解析失败——这正是 DSH 0.2 把 `workflow-worker-thread` 换成 `workflow-ptc` 时最容易漏掉的地方。
 
 ## 兼容性 / Compatibility
 
-| 预设版本 | 适配的 DSH | 说明 |
-| --- | --- | --- |
-| 0.3.0 | 0.1.5-rc.2 及以后 | 人设行迁移到 `prefix`/`suffix`；补齐 `/goal` 命令、`present` 交付物、子代理模型选择、网页抓取 |
-| 0.2.0 / 0.1.0 | 0.1.4 及以前 | 使用已移除的 `config.text`，在 DSH 0.1.5 上**无法挂载** |
+| 预设版本 | 适配的 DSH | 安装方式 | 说明 |
+| --- | --- | --- | --- |
+| **0.4.0** | **0.2.x**（含桌面版 0.2.0-rc.2） | 写入 profile 的 `cordis.patch.yml` | 改为 0.2 的声明式 `dsh-agent-preset` 行；跟进 `workflow-ptc`、`tool-ralph` 默认停用、`tool-plugin-manager` 等变化 |
+| 0.3.0 | 0.1.5-rc.2 | `~/.dsh/.agent-presets/qa-mode/agent.cordis.yml` | 人设行迁移到 `prefix`/`suffix`；补齐 `/goal`、`present`、模型选择、网页抓取 |
+| 0.2.0 / 0.1.0 | ≤ 0.1.4 | 同上 | 使用已移除的 `config.text`，在 DSH ≥ 0.1.5 上**无法挂载** |
 
-`qa-mode/agent.cordis.yml` 是 `standard` 的**分叉（fork）**：除了 `persona` 行，其余每一行都应与同版本 DSH 的 `standard` 完全一致。DSH 升级后建议重新对齐：
+> 0.2 起 `~/.dsh/.agent-presets/` **彻底失效**：整个应用不再有任何代码读取它，放在那里的预设文件会被静默忽略。仍在用 0.1.x 的用户请取标签 `v0.3.0`。
+
+`qa-mode/qa-mode.patch.yml` 是 `standard` 的**分叉（fork）**：它 `plugins` 列表里的每一行都应与同版本 DSH 的 `standard` 预设完全一致，唯一的差异是 `persona` 行。DSH 升级后建议重新对齐——0.2 起内置预设打包在 `app.asar` 内，需要先取出来：
 
 ```bash
-diff "<DSH 安装目录>/@deepseek-ai/dsh-agent-presets/presets/standard/agent.cordis.yml" \
-     "$DSH_HOME/.agent-presets/qa-mode/agent.cordis.yml"
+# 桌面版：用应用自带的 Electron 作为 Node 读 asar
+ELECTRON_RUN_AS_NODE=1 "/path/to/DeepSeek Harness" -e \
+  "process.stdout.write(require('fs').readFileSync('<install>/resources/app.asar/dsh/node_modules/@deepseek-ai/dsh-web-app/presets/standard.patch.yml','utf8'))" \
+  > standard.patch.yml
+diff standard.patch.yml qa-mode/qa-mode.patch.yml
 ```
 
-除 `persona` 行与标注了 `[qa-mode]` 的注释外，任何差异都说明 `standard` 新增或调整了能力而本预设尚未跟进。
+除 `persona` 行与顶部分叉说明外，任何差异都说明 `standard` 新增或调整了能力而本预设尚未跟进。
 
-The composition is a **fork of `standard`**: apart from the `persona` row, every row should match the same DSH version's `standard`. Re-diff after each DSH upgrade; any difference outside the `persona` row and the `[qa-mode]`-marked comments is drift.
+The preset is a **fork of `standard`**: every row in its `plugins` list should match the same DSH version's `standard` preset, with the `persona` row as the only intentional difference. Re-diff after each DSH upgrade; anything else differing is drift.
 
 ## 致谢与许可 / Credits & License
 
